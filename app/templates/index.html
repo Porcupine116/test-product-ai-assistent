@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Product AI Assistant</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: #f4f6f9;
+            color: #202938;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #687386;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 260px;
+            padding: 15px;
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 20px;
+            background: #2858d6;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #1945b9;
+        }
+
+        button:disabled {
+            background: #9aa9cc;
+            cursor: not-allowed;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .status {
+            margin-top: 15px;
+            color: #687386;
+        }
+
+        .error {
+            color: #c0392b;
+        }
+
+        .success {
+            color: #16834b;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Product AI Assistant</h1>
+
+    <p class="subtitle">
+        Генерация SEO-описаний для контрольно-измерительных приборов
+    </p>
+
+    <div class="card">
+
+        <h2>Данные товара</h2>
+
+        <textarea id="productInput">{
+    "name": "Манометр показывающий DM 02",
+    "manufacturer": "Манотомь",
+    "specs": {
+        "диапазон измерений": "0–1,6 МПа",
+        "класс точности": "1,5",
+        "присоединение": "G1/2",
+        "диаметр корпуса": "100 мм"
+    },
+    "description": "Прибор предназначен для измерения избыточного давления."
+}</textarea>
+
+        <button id="generateButton" onclick="generateProduct()">
+            Сгенерировать карточку
+        </button>
+
+        <p id="status" class="status"></p>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Результат генерации</h2>
+
+        <button onclick="copyResult()">
+            Скопировать результат
+        </button>
+
+        <pre id="result">Здесь появится результат генерации...</pre>
+
+    </div>
+
+</div>
+
+<script>
+
+    async function generateProduct() {
+
+        const input = document.getElementById("productInput");
+        const result = document.getElementById("result");
+        const status = document.getElementById("status");
+        const button = document.getElementById("generateButton");
+
+        let productData;
+
+        try {
+            productData = JSON.parse(input.value);
+        } catch (error) {
+            status.textContent = "Некорректный JSON.";
+            status.className = "status error";
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Генерация...";
+        status.textContent = "Отправляем данные в LLM...";
+        status.className = "status";
+
+        try {
+
+            const response = await fetch("/api/generate", {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(productData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+
+                result.textContent = JSON.stringify(
+                    data.detail || data,
+                    null,
+                    2
+                );
+
+                status.textContent = "Не удалось сгенерировать карточку.";
+                status.className = "status error";
+
+                return;
+            }
+
+            result.textContent = JSON.stringify(
+                data,
+                null,
+                2
+            );
+
+            status.textContent = "Карточка успешно сгенерирована.";
+            status.className = "status success";
+
+        } catch (error) {
+
+            status.textContent = "Ошибка соединения с сервером.";
+            status.className = "status error";
+
+            result.textContent = error.message;
+
+        } finally {
+
+            button.disabled = false;
+            button.textContent = "Сгенерировать карточку";
+
+        }
+    }
+
+
+    async function copyResult() {
+
+        const result = document.getElementById("result");
+
+        try {
+            await navigator.clipboard.writeText(result.textContent);
+
+            document.getElementById("status").textContent =
+                "Результат скопирован.";
+
+        } catch (error) {
+            document.getElementById("status").textContent =
+                "Не удалось скопировать результат.";
+        }
+    }
+
+</script>
+
+</body>
+</html>
